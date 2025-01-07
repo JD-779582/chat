@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>聊天室</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+</head>
+<body class="chat-page">
+    <div class="chat-container">
+        <div class="chat-header">
+            <div class="header-left">
+                <h2>聊天室</h2>
+                <span class="online-count">在线 <span id="online-count">0</span> 人</span>
+            </div>
+            <div class="header-right">
+                <span class="user-info">
+                    {{ username }}
+                    {% if is_admin %}
+                    <span class="admin-badge">管理员</span>
+                    {% endif %}
+                </span>
+                <a href="{{ url_for('logout') }}" class="logout-btn">
+                    <i class="fas fa-sign-out-alt"></i> 退出
+                </a>
+            </div>
+        </div>
+
+        <div class="chat-body">
+            <div class="chat-sidebar">
+                <div class="sidebar-header">
+                    <h3>在线用户</h3>
+                </div>
+                <div class="online-users" id="online-users">
+                    <!-- 在线用户列表将通过JS动态添加 -->
+                </div>
+            </div>
+
+            <div class="chat-main">
+                <div class="chat-messages" id="messages">
+                    <!-- 消息将通过JS动态添加 -->
+                </div>
+
+                <div class="chat-input-container">
+                    <div class="input-wrapper">
+                        <textarea id="message-input" 
+                                placeholder="输入消息..." 
+                                rows="1"
+                                maxlength="500"></textarea>
+                        <div class="input-actions">
+                            <button class="emoji-btn" title="表情">
+                                <i class="far fa-smile"></i>
+                            </button>
+                            <button class="upload-btn" title="上传文件">
+                                <i class="fas fa-paperclip"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <button class="send-btn" onclick="sendMessage()">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 系统通知 -->
+    <div id="notification" class="notification"></div>
+
+    <script src="{{ url_for('static', filename='js/chat.js') }}"></script>
+</body>
+</html> 
