@@ -1,9 +1,9 @@
 from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_socketio import SocketIO, emit, join_room, leave_room
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
-from database import Database
+from server.database import Database
 import json
-from chat import ChatManager
+from server.chat import ChatManager
 import os
 
 app = Flask(__name__, 
