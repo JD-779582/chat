@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>聊天室</title>
+    <title>汇生金融</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
@@ -13,7 +13,7 @@
     <div class="chat-container">
         <div class="chat-header">
             <div class="header-left">
-                <h2>聊天室</h2>
+                <h2>汇生金融</h2>
                 <span class="online-count">在线 <span id="online-count">0</span> 人</span>
             </div>
             <div class="header-right">
@@ -47,16 +47,18 @@
                 <div class="chat-input-container">
                     <div class="input-wrapper">
                         <textarea id="message-input" 
-                                placeholder="输入消息..." 
+                                placeholder="输入消息，可直接粘贴图片..." 
                                 rows="1"
-                                maxlength="500"></textarea>
+                                maxlength="500"
+                                onpaste="handlePaste(event)"></textarea>
                         <div class="input-actions">
                             <button class="emoji-btn" title="表情">
                                 <i class="far fa-smile"></i>
                             </button>
-                            <button class="upload-btn" title="上传文件">
+                            <label class="upload-btn" title="上传文件">
+                                <input type="file" id="file-input" style="display: none">
                                 <i class="fas fa-paperclip"></i>
-                            </button>
+                            </label>
                         </div>
                     </div>
                     <button class="send-btn" onclick="sendMessage()">
@@ -69,6 +71,27 @@
 
     <!-- 系统通知 -->
     <div id="notification" class="notification"></div>
+
+    <!-- 添加文件上传预览模态框 -->
+    <div id="upload-preview" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>文件预览</h3>
+                <span class="close">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div id="preview-container"></div>
+                <div class="file-info">
+                    <p>文件名: <span id="preview-filename"></span></p>
+                    <p>大小: <span id="preview-filesize"></span></p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel">取消</button>
+                <button class="btn-send">发送</button>
+            </div>
+        </div>
+    </div>
 
     <script src="{{ url_for('static', filename='js/chat.js') }}"></script>
 </body>

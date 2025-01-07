@@ -442,20 +442,40 @@ body {
 
 .message {
     margin-bottom: 20px;
-    opacity: 0;
-    transform: translateY(20px);
-    animation: messageIn 0.3s ease-out forwards;
     padding: 0 20px;
 }
 
+/* 对方消息样式 */
+.message:not(.self) {
+    text-align: left;
+}
+
+.message:not(.self) .message-content {
+    margin-right: 20%;
+    background: white;
+    border: 1px solid #e2e8f0;
+}
+
+/* 自己消息样式 */
+.message.self {
+    text-align: right;
+}
+
+.message.self .message-content {
+    margin-left: 20%;
+    background: #f0f7ff;  /* 统一使用浅蓝色背景 */
+    border: 1px solid #c7deff;
+}
+
+/* 消息内容通用样式 */
 .message-content {
     display: inline-block;
     max-width: 70%;
     padding: 12px 16px;
     border-radius: 12px;
-    background: white;
     box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     position: relative;
+    text-align: left;
 }
 
 /* 自己发送的消息样式 */
@@ -491,7 +511,7 @@ body {
     display: flex;
     align-items: center;
     gap: 8px;
-    margin-bottom: 4px;
+    margin-bottom: 6px;
     font-size: 0.9em;
 }
 
@@ -660,4 +680,128 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
     background: #a0aec0;
+}
+
+/* 文件上传相关样式 */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+}
+
+.modal-content {
+    position: relative;
+    background: white;
+    margin: 10% auto;
+    padding: 20px;
+    width: 80%;
+    max-width: 500px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.close {
+    font-size: 24px;
+    cursor: pointer;
+    color: #666;
+}
+
+#preview-container {
+    max-height: 300px;
+    overflow: auto;
+    margin-bottom: 20px;
+}
+
+#preview-container img {
+    max-width: 100%;
+    height: auto;
+}
+
+.file-message {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px;
+    border-radius: 12px;
+    max-width: 80%;
+    transition: all 0.3s ease;
+}
+
+.file-icon {
+    font-size: 24px;
+    color: #4a5568;
+    min-width: 24px;
+}
+
+.file-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.file-name {
+    font-weight: 500;
+    margin-bottom: 4px;
+    color: #2d3748;
+    word-break: break-word;
+}
+
+.file-size {
+    font-size: 12px;
+    color: #718096;
+}
+
+.file-download {
+    color: #3182ce;
+    text-decoration: none;
+    padding: 6px;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+.file-download:hover {
+    background: rgba(49,130,206,0.1);
+}
+
+.message.self .file-download {
+    color: #3182ce;
+}
+
+.message-header {
+    margin-bottom: 6px;
+    font-size: 0.9em;
+}
+
+.message:not(.self) .message-header {
+    text-align: left;
+}
+
+.message.self .message-header {
+    text-align: right;
+    flex-direction: row-reverse;
+}
+
+.message img {
+    max-width: 300px;
+    max-height: 300px;
+    border-radius: 12px;
+}
+
+.message:not(.self) img {
+    border: 1px solid #e2e8f0;
+}
+
+.message.self img {
+    border: 1px solid #c7deff;
 } 

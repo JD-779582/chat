@@ -17,7 +17,11 @@ socket.on('disconnect', () => {
 
 // 消息处理
 socket.on('message', (data) => {
-    appendMessage(data);
+    if (data.type === 'file') {
+        appendFileMessage(data);
+    } else {
+        appendMessage(data);
+    }
 });
 
 socket.on('status', (data) => {
@@ -169,3 +173,156 @@ let currentUser = document.querySelector('.user-info').textContent.trim();
 if (currentUser.includes('管理员')) {
     currentUser = currentUser.replace('管理员', '').trim();
 } 
+
+// 文件上传相关
+const fileInput = document.getElementById('file-input');
+const uploadPreview = document.getElementById('upload-preview');
+const previewContainer = document.getElementById('preview-container');
+const previewFilename = document.getElementById('preview-filename');
+const previewFilesize = document.getElementById('preview-filesize');
+let currentFile = null;
+
+fileInput.addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    currentFile = file;
+    previewFilename.textContent = file.name;
+    previewFilesize.textContent = formatFileSize(file.size);
+    
+    // 显示预览
+    if (file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            previewContainer.innerHTML = `<img src="${e.target.result}" alt="预览">`;
+        };
+        reader.readAsDataURL(file);
+    } else {
+        previewContainer.innerHTML = `
+            <div class="file-message">
+                <i class="fas fa-file file-icon"></i>
+                <div class="file-info">
+                    <div class="file-name">${file.name}</div>
+                    <div class="file-size">${formatFileSize(file.size)}</div>
+                </div>
+            </div>
+        `;
+    }
+    
+    uploadPreview.style.display = 'block';
+});
+
+// 发送文件
+async function sendFile() {
+    if (!currentFile) return;
+    
+    const formData = new FormData();
+    formData.append('file', currentFile);
+    
+    try {
+        const response = await fetch('/upload', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const result = await response.json();
+        if (result.success) {
+            uploadPreview.style.display = 'none';
+            currentFile = null;
+            fileInput.value = '';
+        } else {
+            showNotification(result.error, 'error');
+        }
+    } catch (error) {
+        showNotification('文件上传失败', 'error');
+    }
+}
+
+// 格式化文件大小
+function formatFileSize(bytes) {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+function appendFileMessage(data) {
+    const div = document.createElement('div');
+    div.className = `message ${data.username === currentUser ? 'self' : ''}`;
+    
+    const content = document.createElement('div');
+    content.className = 'message-content file-message';
+    
+    const isImage = ['jpg', 'jpeg', 'png', 'gif'].includes(data.filetype.toLowerCase());
+    
+    content.innerHTML = `
+        <div class="message-header">
+            <span class="message-username">${data.username}</span>
+            <span class="message-time">${data.timestamp}</span>
+        </div>
+        ${isImage ? `
+            <img src="${data.url}" alt="${data.filename}" style="max-width: 200px; max-height: 200px;">
+        ` : `
+            <div class="file-message">
+                <i class="fas fa-file file-icon"></i>
+                <div class="file-info">
+                    <div class="file-name">${data.filename}</div>
+                    <div class="file-size">${formatFileSize(data.filesize)}</div>
+                </div>
+                <a href="${data.url}" class="file-download" download>
+                    <i class="fas fa-download"></i>
+                </a>
+            </div>
+        `}
+    `;
+    
+    div.appendChild(content);
+    messagesDiv.appendChild(div);
+    scrollToBottom();
+}
+
+// 添加粘贴处理函数
+function handlePaste(event) {
+    const items = (event.clipboardData || event.originalEvent.clipboardData).items;
+    
+    for (let item of items) {
+        if (item.type.indexOf('image') === 0) {
+            event.preventDefault();
+            const blob = item.getAsFile();
+            
+            // 创建预览
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                previewContainer.innerHTML = `<img src="${e.target.result}" alt="预览">`;
+                previewFilename.textContent = "粘贴的图片.png";
+                previewFilesize.textContent = formatFileSize(blob.size);
+            };
+            reader.readAsDataURL(blob);
+            
+            // 将 blob 转换为 File 对象
+            currentFile = new File([blob], "pasted_image_" + new Date().getTime() + ".png", {
+                type: blob.type
+            });
+            
+            // 显示预览模态框
+            uploadPreview.style.display = 'block';
+            return;
+        }
+    }
+}
+
+// 修改文件上传预览模态框的按钮事件
+document.querySelector('.modal .btn-send').addEventListener('click', function() {
+    sendFile();
+});
+
+document.querySelector('.modal .btn-cancel').addEventListener('click', function() {
+    uploadPreview.style.display = 'none';
+    currentFile = null;
+});
+
+document.querySelector('.modal .close').addEventListener('click', function() {
+    uploadPreview.style.display = 'none';
+    currentFile = null;
+}); 

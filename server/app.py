@@ -1,10 +1,12 @@
-from flask import Flask, render_template, request, redirect, url_for, flash
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
 from flask_socketio import SocketIO, emit, join_room, leave_room
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from server.database import Database
 import json
 from server.chat import ChatManager
 import os
+from werkzeug.utils import secure_filename
+from datetime import datetime
 
 app = Flask(__name__, 
     static_folder='../static',  # 指定静态文件夹的路径
@@ -19,6 +21,16 @@ login_manager.login_view = 'login'
 
 db = Database()
 chat_manager = ChatManager(socketio, db)
+
+# 添加文件上传配置
+UPLOAD_FOLDER = 'static/uploads'
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'txt'}
+MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB 最大限制
+
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 class User(UserMixin):
     def __init__(self, user_data):
@@ -89,6 +101,62 @@ def handle_disconnect():
 @socketio.on('message')
 def handle_message(data):
     chat_manager.handle_message(request.sid, data)
+
+@app.route('/upload', methods=['POST'])
+@login_required
+def upload_file():
+    if 'file' not in request.files:
+        return jsonify({'error': '没有文件'}), 400
+    
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({'error': '没有选择文件'}), 400
+    
+    if file and allowed_file(file.filename):
+        filename = secure_filename(file.filename)
+        # 使用时间戳确保文件名唯一
+        filename = f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{filename}"
+        
+        # 确保上传目录存在
+        os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+        
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(filepath)
+        
+        # 获取文件类型和大小
+        filetype = filename.rsplit('.', 1)[1].lower()
+        filesize = os.path.getsize(filepath)
+        
+        # 保存文件记录
+        file_id = db.save_file_record(
+            filename=filename,
+            filepath=filepath,
+            filetype=filetype,
+            filesize=filesize,
+            user_id=current_user.id
+        )
+        
+        # 发送文件消息
+        file_url = url_for('static', filename=f'uploads/{filename}')
+        message = {
+            'type': 'file',
+            'filename': filename,
+            'url': file_url,
+            'filetype': filetype,
+            'filesize': filesize,
+            'username': current_user.username,
+            'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        }
+        
+        socketio.emit('message', message, room='chat_room')
+        
+        return jsonify({
+            'success': True,
+            'file_url': file_url,
+            'filename': filename
+        })
+    
+    return jsonify({'error': '不支持的文件类型'}), 400
 
 if __name__ == '__main__':
     socketio.run(app, debug=True, host='0.0.0.0', port=5000, allow_unsafe_werkzeug=True) 

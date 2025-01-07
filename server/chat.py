@@ -19,7 +19,7 @@ class ChatManager:
                 'is_admin': current_user.is_admin
             }
             join_room('chat_room', sid)
-            self.broadcast_status(f'{current_user.username} 加入了聊天室')
+            self.broadcast_status(f'{current_user.username} 加入了汇生金融聊天室')
             # 发送在线用户列表
             self.broadcast_user_list()
 
@@ -29,7 +29,7 @@ class ChatManager:
             username = self.active_users[sid]['username']
             del self.active_users[sid]
             leave_room('chat_room', sid)
-            self.broadcast_status(f'{username} 离开了聊天室')
+            self.broadcast_status(f'{username} 离开了汇生金融聊天室')
             # 更新在线用户列表
             self.broadcast_user_list()
 

@@ -39,6 +39,20 @@ class Database:
                     FOREIGN KEY (muted_by) REFERENCES users(id)
                 )
             ''')
+            
+            # 创建文件表
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS files (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    filename TEXT NOT NULL,
+                    filepath TEXT NOT NULL,
+                    filetype TEXT NOT NULL,
+                    filesize INTEGER NOT NULL,
+                    uploaded_by INTEGER,
+                    uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (uploaded_by) REFERENCES users(id)
+                )
+            ''')
             conn.commit()
             
             # 确保至少有一个管理员账户
@@ -305,3 +319,18 @@ class Database:
         except Exception as e:
             print(f"获取消息历史失败: {e}")
             return [] 
+
+    def save_file_record(self, filename, filepath, filetype, filesize, user_id):
+        """保存文件记录到数据库"""
+        try:
+            with sqlite3.connect(self.db_file) as conn:
+                cursor = conn.cursor()
+                cursor.execute('''
+                    INSERT INTO files (filename, filepath, filetype, filesize, uploaded_by)
+                    VALUES (?, ?, ?, ?, ?)
+                ''', (filename, filepath, filetype, filesize, user_id))
+                conn.commit()
+                return cursor.lastrowid
+        except Exception as e:
+            print(f"保存文件记录失败: {e}")
+            return None 
