@@ -22,12 +22,13 @@ login_manager.login_view = 'login'
 db = Database()
 chat_manager = ChatManager(socketio, db)
 
-# 添加文件上传配置
+# 修改文件上传配置
 UPLOAD_FOLDER = 'static/uploads'
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'txt'}
-MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB 最大限制
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'txt', 'zip', 'rar', '7z'}
+MAX_CONTENT_LENGTH = 100 * 1024 * 1024  # 100MB 最大限制
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config['MAX_CONTENT_LENGTH'] = MAX_CONTENT_LENGTH  # 设置 Flask 的最大文件大小限制
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -112,51 +113,64 @@ def upload_file():
     if file.filename == '':
         return jsonify({'error': '没有选择文件'}), 400
     
-    if file and allowed_file(file.filename):
-        filename = secure_filename(file.filename)
-        # 使用时间戳确保文件名唯一
-        filename = f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{filename}"
-        
-        # 确保上传目录存在
-        os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
-        
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        file.save(filepath)
-        
-        # 获取文件类型和大小
-        filetype = filename.rsplit('.', 1)[1].lower()
-        filesize = os.path.getsize(filepath)
-        
-        # 保存文件记录
-        file_id = db.save_file_record(
-            filename=filename,
-            filepath=filepath,
-            filetype=filetype,
-            filesize=filesize,
-            user_id=current_user.id
-        )
-        
-        # 发送文件消息
-        file_url = url_for('static', filename=f'uploads/{filename}')
-        message = {
-            'type': 'file',
-            'filename': filename,
-            'url': file_url,
-            'filetype': filetype,
-            'filesize': filesize,
-            'username': current_user.username,
-            'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        }
-        
-        socketio.emit('message', message, room='chat_room')
-        
-        return jsonify({
-            'success': True,
-            'file_url': file_url,
-            'filename': filename
-        })
+    # 检查文件名是否合法
+    if '.' not in file.filename:
+        return jsonify({'error': '无效的文件名'}), 400
     
-    return jsonify({'error': '不支持的文件类型'}), 400
+    try:
+        if file and allowed_file(file.filename):
+            original_filename = secure_filename(file.filename)  # 保存原始文件名
+            # 使用时间戳创建存储文件名
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            name, ext = os.path.splitext(original_filename)
+            storage_filename = f"{timestamp}_{name}{ext}"  # 用于存储的文件名
+            
+            # 确保上传目录存在
+            os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+            
+            filepath = os.path.join(app.config['UPLOAD_FOLDER'], storage_filename)
+            file.save(filepath)
+            
+            # 获取文件类型和大小
+            filetype = ext[1:].lower()  # 移除点号
+            filesize = os.path.getsize(filepath)
+            
+            # 保存文件记录
+            file_id = db.save_file_record(
+                filename=storage_filename,
+                filepath=filepath,
+                filetype=filetype,
+                filesize=filesize,
+                user_id=current_user.id
+            )
+            
+            # 发送文件消息
+            file_url = url_for('static', filename=f'uploads/{storage_filename}')
+            message = {
+                'type': 'file',
+                'filename': original_filename,  # 使用原始文件名显示
+                'storage_filename': storage_filename,  # 存储的文件名
+                'url': file_url,
+                'filetype': filetype,
+                'filesize': filesize,
+                'username': current_user.username,
+                'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            }
+            
+            socketio.emit('message', message, room='chat_room')
+            
+            return jsonify({
+                'success': True,
+                'file_url': file_url,
+                'filename': original_filename,  # 返回原始文件名
+                'storage_filename': storage_filename
+            })
+        
+        return jsonify({'error': '不支持的文件类型'}), 400
+        
+    except Exception as e:
+        print(f"文件上传错误: {str(e)}")
+        return jsonify({'error': '文件上传失败'}), 500
 
 if __name__ == '__main__':
     socketio.run(app, debug=True, host='0.0.0.0', port=5000, allow_unsafe_werkzeug=True) 

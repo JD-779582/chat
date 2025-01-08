@@ -186,6 +186,14 @@ fileInput.addEventListener('change', function(e) {
     const file = e.target.files[0];
     if (!file) return;
     
+    // 检查文件大小（100MB = 100 * 1024 * 1024 bytes）
+    const maxSize = 100 * 1024 * 1024;
+    if (file.size > maxSize) {
+        showNotification('文件大小不能超过100MB', 'error');
+        fileInput.value = '';
+        return;
+    }
+    
     currentFile = file;
     previewFilename.textContent = file.name;
     previewFilesize.textContent = formatFileSize(file.size);
@@ -220,19 +228,49 @@ async function sendFile() {
     formData.append('file', currentFile);
     
     try {
-        const response = await fetch('/upload', {
-            method: 'POST',
-            body: formData
-        });
+        const xhr = new XMLHttpRequest();
         
-        const result = await response.json();
-        if (result.success) {
-            uploadPreview.style.display = 'none';
-            currentFile = null;
-            fileInput.value = '';
-        } else {
-            showNotification(result.error, 'error');
-        }
+        // 添加进度条到预览窗口
+        const progressBar = document.createElement('div');
+        progressBar.className = 'upload-progress';
+        progressBar.innerHTML = `
+            <div class="progress-bar">
+                <div class="progress-fill"></div>
+            </div>
+            <div class="progress-text">0%</div>
+        `;
+        document.querySelector('.modal-body').appendChild(progressBar);
+        
+        xhr.upload.onprogress = function(e) {
+            if (e.lengthComputable) {
+                const percent = Math.round((e.loaded / e.total) * 100);
+                progressBar.querySelector('.progress-fill').style.width = percent + '%';
+                progressBar.querySelector('.progress-text').textContent = percent + '%';
+            }
+        };
+        
+        xhr.onload = function() {
+            if (xhr.status === 200) {
+                const result = JSON.parse(xhr.responseText);
+                if (result.success) {
+                    uploadPreview.style.display = 'none';
+                    currentFile = null;
+                    fileInput.value = '';
+                } else {
+                    showNotification(result.error, 'error');
+                }
+            } else {
+                showNotification('文件上传失败', 'error');
+            }
+        };
+        
+        xhr.onerror = function() {
+            showNotification('文件上传失败', 'error');
+        };
+        
+        xhr.open('POST', '/upload', true);
+        xhr.send(formData);
+        
     } catch (error) {
         showNotification('文件上传失败', 'error');
     }
@@ -290,6 +328,13 @@ function handlePaste(event) {
         if (item.type.indexOf('image') === 0) {
             event.preventDefault();
             const blob = item.getAsFile();
+            
+            // 检查文件大小
+            const maxSize = 100 * 1024 * 1024;
+            if (blob.size > maxSize) {
+                showNotification('文件大小不能超过100MB', 'error');
+                return;
+            }
             
             // 创建预览
             const reader = new FileReader();
